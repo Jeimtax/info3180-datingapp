@@ -1,8 +1,10 @@
 from app import app
-from flask import render_template, request, jsonify, send_file
+from .models import *
+from flask import Blueprint, render_template, request, jsonify, send_file, session
 import os
+from werkzeug.security import generate_password_hash
 
-
+api = Blueprint('api', __name__)
 ###
 # Routing for your application.
 ###
@@ -10,6 +12,31 @@ import os
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
+
+api.route('auth/register', methods=["POST"])
+def register():
+    data = request.get_json()
+
+
+    if User.query.filter_by(email=data["email"]).first():
+        return jsonify("Error: Email already registered"), 400
+    
+    user = User(
+        email = data["email"].lower().strip(),
+        username = data["username"].strip(),
+        password_hash = generate_password_hash(data["password"])
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "Account created", "user_id": user.id}), 201
+
+
+
+
+
+
 
 
 ###

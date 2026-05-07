@@ -1,11 +1,23 @@
 from app import db
 from datetime import datetime
 
-class User(db.model):
+class User(db.Model):
     __tablename__= 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    username = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(120), nullable=False)
+    join_date = db.Column(db.DateTime, default=datetime.utcnow)
+    profile = db.relationship('Profile', backref='user', uselist=False)
+
+    def __init__(self, email, username, password_hash):
+        self.email = email
+        self.username = username
+        self.password_hash = password_hash
+
+class Profile(db.Model):
+    __tablename__= 'profiles'
+    id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     age = db.Column(db.Integer)
@@ -17,13 +29,5 @@ class User(db.model):
     #field to be added
     visibility = db.Column(db.String(255), default='public')
 
-    def __init__(self, email, password, first_name, last_name, age, bio, location, hobbies, visibility):
-        self.email = email
-        self.password = password
-        self.first_name = first_name
-        self.last_name = last_name
-        self.age = age
-        self.bio = bio
-        self.location = location
-        self.hobbies = hobbies
-        self.visibility = visibility
+    
+        
