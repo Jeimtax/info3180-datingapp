@@ -1,10 +1,13 @@
-from app import app
-from .models import *
-from flask import Blueprint, render_template, request, jsonify, send_file, session
+from app import app, db
+from .models import User, Profile
+from flask import Blueprint, render_template, request, jsonify, send_from_directory
 import os
+from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
+from .forms import RegistrationForm, ProfileForm
 
 api = Blueprint('api', __name__)
+
 ###
 # Routing for your application.
 ###
@@ -13,32 +16,60 @@ api = Blueprint('api', __name__)
 def index():
     return jsonify(message="This is the beginning of our API")
 
-api.route('auth/register', methods=["POST"])
+@api.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    reg_form = RegistrationForm()
+    prof_form = ProfileForm()
 
+    if reg_form.validate_on_submit() and prof_form.validate_on_submit():
+        
+        if User.query.filter_by(email=reg_form.email.data).first():
+            return jsonify({"errors": ["Email already registered"]}), 400
+        
+        file = prof_form.profile_pic.data
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-    if User.query.filter_by(email=data["email"]).first():
-        return jsonify("Error: Email already registered"), 400
+        try:
+            user = User(
+                username=reg_form.username.data,
+                email=reg_form.email.data,
+                password_hash=generate_password_hash(reg_form.password.data)
+            )
+            db.session.add(user)
+            db.session.flush()
+
+            profile = Profile(
+                user_id=user.id,
+                first_name=prof_form.first_name.data,
+                last_name=prof_form.last_name.data,
+                age=prof_form.age.data,
+                gender=prof_form.gender.data,
+                location=prof_form.location.data,
+                bio=prof_form.bio.data,
+                hobbie1=prof_form.hobbie1.data,
+                hobbie2=prof_form.hobbie2.data,
+                hobbie3=prof_form.hobbie3.data,
+                relationship_goal=prof_form.relationship_goal.data,
+                profile_pic=filename,
+                visibility=prof_form.visibility.data
+            )
+            db.session.add(profile)
+            db.session.commit()
+
+            return jsonify({
+                "message": "User and Profile successfully created",
+                "user_id": user.id
+            }), 201
+        
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"errors": [f"Database error: {str(e)}"]}), 500
     
-    user = User(
-        email = data["email"].lower().strip(),
-        username = data["username"].strip(),
-        password_hash = generate_password_hash(data["password"])
-    )
-
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({"message": "Account created", "user_id": user.id}), 201
-
-
-
-
-
-
-
-
+    errors = form_errors(reg_form) + form_errors(prof_form)
+    return jsonify({"errors": errors}), 400
+    
+    
 ###
 # The functions below should be applicable to all Flask apps.
 ###
