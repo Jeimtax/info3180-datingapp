@@ -145,6 +145,29 @@ def like_user():
     return jsonify(is_match=bool(mutual))
 
 
+@api.route('/profile', methods=['GET'])
+@jwt_required()
+def get_my_profile():
+    current_user_id = get_jwt_identity()
+
+    user = User.query.get(current_user_id)
+    profile = Profile.query.filter_by(user_id=current_user_id).first()
+    
+    if not user or not profile:
+        return jsonify(error="Profile not found"), 404
+
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "first_name": profile.first_name,
+        "last_name": profile.last_name,
+        "location": profile.location,
+        "bio": profile.bio,
+        "pic": profile.profile_pic or 'default.png'
+    }), 200
+
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###
