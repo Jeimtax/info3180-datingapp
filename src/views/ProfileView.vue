@@ -33,7 +33,7 @@ const user = ref(null);
 async function fetchMyProfile() {
   const token = localStorage.getItem('token');
   try {
-    const response = await fetch("/profile", {
+    const response = await fetch("http://localhost:5000/api/v1/profile", {
       headers: {
         'Authorization': `Bearer ${token}`
       }
