@@ -20,37 +20,44 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: () => import('../views/RegisterFormView.vue')
+      component: () => import('../views/RegisterFormView.vue'),
+      meta: { guestOnly: true }
     },
     {
       path: '/login',
       name: 'login',
-      component: () => import('../views/LoginView.vue')
+      component: () => import('../views/LoginView.vue'),
+      meta: { guestOnly: true }
     },
     {
       path: '/explore',
       name: 'explore',
-      component: () => import('../views/ExploreView.vue')
+      component: () => import('../views/ExploreView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('../views/ProfileView.vue')
+      component: () => import('../views/ProfileView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/matches',
       name: 'matches',
-      component: () => import('../views/MatchesView.vue')
+      component: () => import('../views/MatchesView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/messages',
       name: 'messages',
-      component: () => import('../views/MessagesView.vue')
+      component: () => import('../views/MessagesView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/messages/:userId',
       name: 'conversation',
-      component: () => import('../views/MessagesView.vue')
+      component: () => import('../views/MessagesView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
