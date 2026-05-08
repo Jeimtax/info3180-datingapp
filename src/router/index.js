@@ -41,6 +41,16 @@ const router = createRouter({
       path: '/matches',
       name: 'matches',
       component: () => import('../views/MatchesView.vue')
+    },
+    {
+      path: '/messages',
+      name: 'messages',
+      component: () => import('../views/MessagesView.vue')
+    },
+    {
+      path: '/messages/:userId',
+      name: 'conversation',
+      component: () => import('../views/MessagesView.vue')
     }
   ]
 })
