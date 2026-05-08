@@ -38,6 +38,61 @@
           <p><strong>Location:</strong> {{ user.location || '—' }}</p>
           <p><strong>Visibility:</strong> {{ user.visibility }}</p>
         </div>
+
+        <!-- 2FA Card -->
+        <div class="detail-card tfa-card">
+          <h3>Two-Factor Authentication</h3>
+
+          <!-- Enabled state -->
+          <template v-if="tfa.enabled">
+            <p class="tfa-status on">2FA is enabled on your account.</p>
+            <div v-if="!tfa.showDisable">
+              <button class="btn-tfa btn-danger" @click="tfa.showDisable = true">Disable 2FA</button>
+            </div>
+            <div v-else class="tfa-action">
+              <p>Enter your authenticator code to confirm:</p>
+              <input v-model="tfa.code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="otp-input" />
+              <div class="tfa-btn-row">
+                <button class="btn-tfa btn-danger" :disabled="tfa.loading" @click="disable2fa">
+                  {{ tfa.loading ? 'Disabling...' : 'Confirm Disable' }}
+                </button>
+                <button class="btn-tfa btn-cancel" @click="tfa.showDisable = false; tfa.code = ''">Cancel</button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Disabled state -->
+          <template v-else>
+            <p class="tfa-status off">2FA is not enabled.</p>
+
+            <!-- Step 1: Get the secret -->
+            <div v-if="!tfa.secret">
+              <button class="btn-tfa btn-primary" :disabled="tfa.loading" @click="setup2fa">
+                {{ tfa.loading ? 'Generating...' : 'Enable 2FA' }}
+              </button>
+            </div>
+
+            <!-- Step 2: Show secret + confirm with code -->
+            <div v-else class="tfa-setup">
+              <p>1. Open your authenticator app (Google Authenticator, Authy, etc.) and add a new account manually.</p>
+              <p>2. Enter this key:</p>
+              <div class="tfa-secret">{{ tfa.secret }}</div>
+              <p>Or scan this URI with a QR code reader:</p>
+              <div class="tfa-uri">{{ tfa.uri }}</div>
+              <p>3. Enter the 6-digit code from your app to confirm:</p>
+              <input v-model="tfa.code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="otp-input" />
+              <div class="tfa-btn-row">
+                <button class="btn-tfa btn-primary" :disabled="tfa.loading" @click="confirm2fa">
+                  {{ tfa.loading ? 'Verifying...' : 'Confirm & Enable' }}
+                </button>
+                <button class="btn-tfa btn-cancel" @click="tfa.secret = ''; tfa.code = ''">Cancel</button>
+              </div>
+            </div>
+          </template>
+
+          <p v-if="tfa.error" class="tfa-error">{{ tfa.error }}</p>
+          <p v-if="tfa.success" class="tfa-success">{{ tfa.success }}</p>
+        </div>
       </div>
     </template>
 
@@ -136,6 +191,80 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 
 const user = ref(null);
+
+// ── 2FA state ──
+const tfa = reactive({
+  enabled: false,
+  loading: false,
+  secret: '',
+  uri: '',
+  code: '',
+  showDisable: false,
+  error: '',
+  success: ''
+});
+
+async function fetch2faStatus() {
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:5000/api/v1/auth/2fa/status', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (res.ok) {
+    const data = await res.json();
+    tfa.enabled = data.enabled;
+  }
+}
+
+async function setup2fa() {
+  tfa.loading = true; tfa.error = ''; tfa.success = '';
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('http://localhost:5000/api/v1/auth/2fa/setup', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok) { tfa.secret = data.secret; tfa.uri = data.provisioning_uri; }
+    else tfa.error = data.error || 'Setup failed.';
+  } catch { tfa.error = 'Connection error.'; }
+  finally { tfa.loading = false; }
+}
+
+async function confirm2fa() {
+  tfa.loading = true; tfa.error = ''; tfa.success = '';
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('http://localhost:5000/api/v1/auth/2fa/enable', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: tfa.code })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      tfa.enabled = true; tfa.secret = ''; tfa.uri = ''; tfa.code = '';
+      tfa.success = '2FA enabled successfully!';
+    } else { tfa.error = data.error || 'Verification failed.'; tfa.code = ''; }
+  } catch { tfa.error = 'Connection error.'; }
+  finally { tfa.loading = false; }
+}
+
+async function disable2fa() {
+  tfa.loading = true; tfa.error = ''; tfa.success = '';
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('http://localhost:5000/api/v1/auth/2fa/disable', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: tfa.code })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      tfa.enabled = false; tfa.showDisable = false; tfa.code = '';
+      tfa.success = '2FA disabled.';
+    } else { tfa.error = data.error || 'Failed.'; tfa.code = ''; }
+  } catch { tfa.error = 'Connection error.'; }
+  finally { tfa.loading = false; }
+}
 const isEditing = ref(false);
 const isSaving = ref(false);
 const saveError = ref('');
@@ -237,7 +366,10 @@ async function saveProfile() {
   }
 }
 
-onMounted(fetchMyProfile);
+onMounted(() => {
+  fetchMyProfile();
+  fetch2faStatus();
+});
 </script>
 
 <style scoped>
@@ -310,4 +442,49 @@ textarea { resize: vertical; }
 .alert-danger { background: #f8d7da; color: #721c24; }
 
 .loading { text-align: center; color: #888; margin-top: 60px; }
+
+/* ── 2FA ── */
+.tfa-card { display: flex; flex-direction: column; gap: 12px; }
+.tfa-status { font-weight: 600; }
+.tfa-status.on  { color: #16a34a; }
+.tfa-status.off { color: #9ca3af; }
+
+.tfa-setup { display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; color: #4b5563; }
+
+.tfa-secret {
+  font-family: monospace; font-size: 1rem; font-weight: 700;
+  background: #f3f4f6; border: 1px dashed #d1d5db;
+  padding: 10px 14px; border-radius: 8px; letter-spacing: 0.1em;
+  word-break: break-all; color: #1f2937;
+}
+
+.tfa-uri {
+  font-family: monospace; font-size: 0.75rem;
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  padding: 8px 12px; border-radius: 8px;
+  word-break: break-all; color: #6b7280;
+}
+
+.otp-input {
+  padding: 12px; border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: 1.4rem; font-weight: 700; letter-spacing: 0.4em;
+  text-align: center; width: 100%; box-sizing: border-box;
+}
+.otp-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+.tfa-action { display: flex; flex-direction: column; gap: 10px; }
+.tfa-btn-row { display: flex; gap: 10px; }
+
+.btn-tfa {
+  flex: 1; padding: 10px 16px;
+  border: none; border-radius: 8px;
+  font-weight: 600; cursor: pointer; font-size: 0.9rem;
+}
+.btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+.btn-danger  { background: #ef4444; color: white; }
+.btn-cancel  { background: #f3f4f6; color: #555; border: 1px solid #d1d5db; }
+.btn-tfa:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.tfa-error   { color: #dc2626; font-size: 0.9rem; font-weight: 500; }
+.tfa-success { color: #16a34a; font-size: 0.9rem; font-weight: 500; }
 </style>
