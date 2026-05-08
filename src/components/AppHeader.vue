@@ -2,7 +2,8 @@
   <header>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
       <div class="container-fluid">
-        <a class="navbar-brand" href="/">VueJS with Flask</a>
+        <RouterLink class="navbar-brand" to="/">DriftDater</RouterLink>
+
         <button
           class="navbar-toggler"
           type="button"
@@ -14,13 +15,28 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav me-auto">
+          <!-- Logged-in links -->
+          <ul v-if="isLoggedIn" class="navbar-nav me-auto">
             <li class="nav-item">
-              <RouterLink to="/" class="nav-link active">Home</RouterLink>
+              <RouterLink class="nav-link" to="/explore">Dashboard</RouterLink>
             </li>
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/about">About</RouterLink>
+              <RouterLink class="nav-link" to="/matches">Matches</RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/messages">Messages</RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/profile">Profile</RouterLink>
+            </li>
+          </ul>
+
+          <!-- Guest links -->
+          <ul v-else class="navbar-nav me-auto">
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/">Home</RouterLink>
             </li>
             <li class="nav-item">
               <RouterLink class="nav-link" to="/register">Register</RouterLink>
@@ -28,11 +44,12 @@
             <li class="nav-item">
               <RouterLink class="nav-link" to="/login">Login</RouterLink>
             </li>
+          </ul>
+
+          <!-- Logout button (right side) -->
+          <ul v-if="isLoggedIn" class="navbar-nav ms-auto">
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/explore">Explore</RouterLink>
-            </li>
-            <li class="nav-item">
-              <RouterLink class="nav-link" to="/profile">Profile</RouterLink>
+              <button class="nav-link btn btn-link text-white" @click="logout">Logout</button>
             </li>
           </ul>
         </div>
@@ -42,9 +59,25 @@
 </template>
 
 <script setup>
-import { RouterLink } from "vue-router";
+import { ref, computed } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
+
+const router = useRouter();
+const tokenRef = ref(localStorage.getItem('token'));
+
+router.afterEach(() => {
+  tokenRef.value = localStorage.getItem('token');
+});
+
+const isLoggedIn = computed(() => !!tokenRef.value);
+
+function logout() {
+  localStorage.removeItem('token');
+  tokenRef.value = null;
+  router.push('/login');
+}
 </script>
 
-<style>
-/* Add any component specific styles here */
+<style scoped>
+.btn-link { background: none; border: none; padding: 0; cursor: pointer; }
 </style>
