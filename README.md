@@ -5,8 +5,8 @@ A full-stack dating web application built for INFO3180. Users can register, brow
 ## Team
 
 | Name | Student ID | GitHub |
-| [Khajeim Daily]| [620172076] | [@jeimtax](https://github.com/jeimtax) |
-| [Randre Fearon]| [620167746] | [@drexify](https://github.com/drexify) |
+| [Khajeim Daily] | [620172076] | [@jeimtax](https://github.com/jeimtax) |
+| [Randre Fearon] | [620167746] | [@drexify](https://github.com/drexify) |
 
 ---
 
