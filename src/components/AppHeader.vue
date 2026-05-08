@@ -46,9 +46,14 @@
             </li>
           </ul>
 
-          <!-- Logout button (right side) -->
-          <ul v-if="isLoggedIn" class="navbar-nav ms-auto">
+          <!-- Right side: dark mode toggle + logout -->
+          <ul class="navbar-nav ms-auto align-items-center">
             <li class="nav-item">
+              <button class="dark-toggle" @click="toggleDark" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+                {{ isDark ? '☀️' : '🌙' }}
+              </button>
+            </li>
+            <li v-if="isLoggedIn" class="nav-item">
               <button class="nav-link btn btn-link text-white" @click="logout">Logout</button>
             </li>
           </ul>
@@ -61,14 +66,13 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
+import { useDarkMode } from '@/composables/useDarkMode.js';
 
 const router = useRouter();
+const { isDark, toggle: toggleDark } = useDarkMode();
+
 const tokenRef = ref(localStorage.getItem('token'));
-
-router.afterEach(() => {
-  tokenRef.value = localStorage.getItem('token');
-});
-
+router.afterEach(() => { tokenRef.value = localStorage.getItem('token'); });
 const isLoggedIn = computed(() => !!tokenRef.value);
 
 function logout() {
@@ -80,4 +84,10 @@ function logout() {
 
 <style scoped>
 .btn-link { background: none; border: none; padding: 0; cursor: pointer; }
+.dark-toggle {
+  background: none; border: none; font-size: 1.2rem;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  transition: background 0.2s;
+}
+.dark-toggle:hover { background: rgba(255,255,255,0.15); }
 </style>
