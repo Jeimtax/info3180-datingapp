@@ -122,9 +122,9 @@ def like_user():
 def get_my_profile():
     current_user_id = get_jwt_identity()
 
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, int(current_user_id))
     profile = Profile.query.filter_by(user_id=current_user_id).first()
-    
+
     if not user or not profile:
         return jsonify(error="Profile not found"), 404
 
@@ -134,10 +134,54 @@ def get_my_profile():
         "email": user.email,
         "first_name": profile.first_name,
         "last_name": profile.last_name,
+        "age": profile.age,
+        "gender": profile.gender,
         "location": profile.location,
         "bio": profile.bio,
+        "hobbie1": profile.hobbie1,
+        "hobbie2": profile.hobbie2,
+        "hobbie3": profile.hobbie3,
+        "relationship_goal": profile.relationship_goal,
+        "visibility": profile.visibility,
         "pic": profile.profile_pic or 'default.png'
     }), 200
+
+
+@api.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    current_user_id = get_jwt_identity()
+    profile = Profile.query.filter_by(user_id=current_user_id).first()
+
+    if not profile:
+        return jsonify(error="Profile not found"), 404
+
+    if 'profile_pic' in request.files:
+        file = request.files['profile_pic']
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            profile.profile_pic = filename
+
+    profile.first_name = request.form.get('first_name', profile.first_name)
+    profile.last_name = request.form.get('last_name', profile.last_name)
+    profile.bio = request.form.get('bio', profile.bio)
+    profile.location = request.form.get('location', profile.location)
+    profile.hobbie1 = request.form.get('hobbie1', profile.hobbie1)
+    profile.hobbie2 = request.form.get('hobbie2', profile.hobbie2)
+    profile.hobbie3 = request.form.get('hobbie3', profile.hobbie3)
+    profile.relationship_goal = request.form.get('relationship_goal', profile.relationship_goal)
+    profile.visibility = request.form.get('visibility', profile.visibility)
+
+    age = request.form.get('age', type=int)
+    if age:
+        profile.age = age
+    gender = request.form.get('gender')
+    if gender:
+        profile.gender = gender
+
+    db.session.commit()
+    return jsonify({"message": "Profile updated successfully"}), 200
 
 
 @api.route('/matches', methods=['GET'])
