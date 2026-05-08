@@ -202,6 +202,7 @@ def get_matches():
                 matches_data.append({
                     "id": other_user.user_id,
                     "name": f"{other_user.first_name} {other_user.last_name}",
+                    "bio": other_user.bio or '',
                     "pic": other_user.profile_pic or 'default.png'
                 })
                 
