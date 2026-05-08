@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, request, jsonify, send_from_direct
 import os
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from .forms import RegistrationForm, ProfileForm
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 api = Blueprint('api', __name__)
@@ -19,83 +18,56 @@ def index():
 
 @api.route('/register', methods=['POST'])
 def register():
-    if request.is_json:
-        data = request.get_json()
-        try:
-            user = User(
-                username=data.get('username'),
-                email=data.get('email'),
-                password_hash=generate_password_hash(data.get('password'))
-            )
-            db.session.add(user)
-            db.session.flush()
+    email = request.form.get('email', '').strip()
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
 
-            profile = Profile(
-                user_id=user.id,
-                first_name=data.get('first_name', 'New'),
-                last_name=data.get('last_name', 'User'),
-                location=data.get('location', 'Unknown'),
-                bio=data.get('bio', ''),
-                visibility='public'
-            )
-            db.session.add(profile)
-            db.session.commit()
-            return jsonify({"message": "User registered successfully", "user_id": user.id}), 201
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"errors": [str(e)]}), 500
+    if not email or not username or not password:
+        return jsonify({"errors": ["Email, username, and password are required"]}), 400
 
-    reg_form = RegistrationForm()
-    prof_form = ProfileForm()
+    if User.query.filter_by(email=email).first():
+        return jsonify({"errors": ["Email already registered"]}), 400
 
-    if reg_form.validate_on_submit() and prof_form.validate_on_submit():
-        if User.query.filter_by(email=reg_form.email.data).first():
-            return jsonify({"errors": ["Email already registered"]}), 400
-        
-        filename = "default.png"
-        if prof_form.profile_pic.data:
-            file = prof_form.profile_pic.data
+    if User.query.filter_by(username=username).first():
+        return jsonify({"errors": ["Username already taken"]}), 400
+
+    filename = "default.png"
+    if 'profile_pic' in request.files:
+        file = request.files['profile_pic']
+        if file and file.filename:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        try:
-            user = User(
-                username=reg_form.username.data,
-                email=reg_form.email.data,
-                password_hash=generate_password_hash(reg_form.password.data)
-            )
-            db.session.add(user)
-            db.session.flush()
+    try:
+        user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password)
+        )
+        db.session.add(user)
+        db.session.flush()
 
-            profile = Profile(
-                user_id=user.id,
-                first_name=prof_form.first_name.data,
-                last_name=prof_form.last_name.data,
-                age=prof_form.age.data,
-                gender=prof_form.gender.data,
-                location=prof_form.location.data,
-                bio=prof_form.bio.data,
-                hobbie1=prof_form.hobbie1.data,
-                hobbie2=prof_form.hobbie2.data,
-                hobbie3=prof_form.hobbie3.data,
-                relationship_goal=prof_form.relationship_goal.data,
-                profile_pic=filename,
-                visibility=prof_form.visibility.data
-            )
-            db.session.add(profile)
-            db.session.commit()
-
-            return jsonify({
-                "message": "User and Profile successfully created",
-                "user_id": user.id
-            }), 201
-        
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"errors": [f"Database error: {str(e)}"]}), 500
-    
-    errors = form_errors(reg_form) + form_errors(prof_form)
-    return jsonify({"errors": errors}), 400
+        profile = Profile(
+            user_id=user.id,
+            first_name=request.form.get('first_name', 'New'),
+            last_name=request.form.get('last_name', 'User'),
+            age=request.form.get('age', type=int),
+            gender=request.form.get('gender'),
+            location=request.form.get('location', 'Unknown'),
+            bio=request.form.get('bio', ''),
+            hobbie1=request.form.get('hobbie1', ''),
+            hobbie2=request.form.get('hobbie2', ''),
+            hobbie3=request.form.get('hobbie3', ''),
+            relationship_goal=request.form.get('relationship_goal', ''),
+            profile_pic=filename,
+            visibility=request.form.get('visibility', 'public')
+        )
+        db.session.add(profile)
+        db.session.commit()
+        return jsonify({"message": "User registered successfully", "user_id": user.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"errors": [str(e)]}), 500
 
    
 @api.route('/auth/login', methods=['POST'])
