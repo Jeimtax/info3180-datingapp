@@ -24,10 +24,17 @@ const profiles = ref([]);
 // 1. Fetch profiles from your Flask /api/v1/explore route
 async function fetchProfiles() {
   const token = localStorage.getItem('token'); // Get the JWT from login
+  console.log("Current Token:", token);
+
+  if (!token) {
+      console.error("No token found in localStorage. Please login again.");
+      return;
+  }
   try {
     const response = await fetch("http://localhost:5000/api/v1/explore", {
       headers: {
-        'Authorization': `Bearer ${token}` // Send the token to Flask!
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
       }
     });
     const data = await response.json();
