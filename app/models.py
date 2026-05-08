@@ -28,6 +28,7 @@ class Profile(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     age = db.Column(db.Integer)
+    gender = db.Column(db.String(20))
     bio = db.Column(db.Text)
     location = db.Column(db.String(100))
 
