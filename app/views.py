@@ -19,17 +19,44 @@ def index():
 
 @api.route('/register', methods=['POST'])
 def register():
+    if request.is_json:
+        data = request.get_json()
+        try:
+            user = User(
+                username=data.get('username'),
+                email=data.get('email'),
+                password_hash=generate_password_hash(data.get('password'))
+            )
+            db.session.add(user)
+            db.session.flush()
+
+            profile = Profile(
+                user_id=user.id,
+                first_name=data.get('first_name', 'New'),
+                last_name=data.get('last_name', 'User'),
+                location=data.get('location', 'Unknown'),
+                bio=data.get('bio', ''),
+                visibility=True
+            )
+            db.session.add(profile)
+            db.session.commit()
+            return jsonify({"message": "User registered successfully", "user_id": user.id}), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"errors": [str(e)]}), 500
+
     reg_form = RegistrationForm()
     prof_form = ProfileForm()
 
     if reg_form.validate_on_submit() and prof_form.validate_on_submit():
-        
         if User.query.filter_by(email=reg_form.email.data).first():
             return jsonify({"errors": ["Email already registered"]}), 400
         
-        file = prof_form.profile_pic.data
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        filename = "default.png"
+        if prof_form.profile_pic.data:
+            file = prof_form.profile_pic.data
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
         try:
             user = User(
@@ -84,6 +111,38 @@ def login():
         return jsonify(message="Login successful", token=access_token), 200
     
     return jsonify(error="Invalid username or password"), 401
+
+
+@api.route('/explore', methods=['GET'])
+@jwt_required()
+def explore():
+    current_user_id = get_jwt_identity()
+    liked_ids = [m.target_id for m in Match.query.filter_by(user_id=current_user_id).all()]
+    liked_ids.append(current_user_id)
+    
+    profiles = Profile.query.filter(~Profile.user_id.in_(liked_ids)).all()
+    return jsonify(profiles=[{
+        "id": p.user_id, 
+        "name": f"{p.first_name} {p.last_name}",
+        "bio": p.bio,
+        "pic": p.profile_pic
+    } for p in profiles])
+
+
+@api.route('/like', methods=['POST'])
+@jwt_required()
+def like_user():
+    current_user_id = get_jwt_identity()
+    target_id = request.json.get('target_id')
+    
+    new_match = Match(user_id=current_user_id, target_id=target_id, is_like=True)
+    db.session.add(new_match)
+    
+    # Check for mutual match
+    mutual = Match.query.filter_by(user_id=target_id, target_id=current_user_id).first()
+    db.session.commit()
+    
+    return jsonify(is_match=bool(mutual))
 
 
 ###
