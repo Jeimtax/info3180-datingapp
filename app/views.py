@@ -1,4 +1,5 @@
 from app import app, db
+from sqlalchemy import or_
 from .models import User, Profile, Match, Message
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
 import os
@@ -89,14 +90,61 @@ def login():
 @jwt_required()
 def explore():
     current_user_id = get_jwt_identity()
-    liked_ids = [m.target_id for m in Match.query.filter_by(user_id=current_user_id).all()]
-    liked_ids.append(current_user_id)
-    
-    profiles = Profile.query.filter(~Profile.user_id.in_(liked_ids)).all()
+
+    interacted_ids = [m.target_id for m in Match.query.filter_by(user_id=current_user_id).all()]
+    interacted_ids.append(int(current_user_id))
+
+    query = Profile.query.filter(
+        ~Profile.user_id.in_(interacted_ids),
+        Profile.visibility == 'public'
+    )
+
+    search = request.args.get('search', '').strip()
+    if search:
+        pattern = f'%{search}%'
+        query = query.filter(
+            or_(
+                Profile.first_name.ilike(pattern),
+                Profile.last_name.ilike(pattern),
+                Profile.bio.ilike(pattern)
+            )
+        )
+
+    location = request.args.get('location', '').strip()
+    if location:
+        query = query.filter(Profile.location.ilike(f'%{location}%'))
+
+    min_age = request.args.get('min_age', type=int)
+    max_age = request.args.get('max_age', type=int)
+    if min_age:
+        query = query.filter(Profile.age >= min_age)
+    if max_age:
+        query = query.filter(Profile.age <= max_age)
+
+    interest = request.args.get('interest', '').strip()
+    if interest:
+        pattern = f'%{interest}%'
+        query = query.filter(
+            or_(
+                Profile.hobbie1.ilike(pattern),
+                Profile.hobbie2.ilike(pattern),
+                Profile.hobbie3.ilike(pattern)
+            )
+        )
+
+    sort = request.args.get('sort', 'newest')
+    query = query.order_by(Profile.join_date.asc() if sort == 'oldest' else Profile.join_date.desc())
+
+    profiles = query.all()
     return jsonify(profiles=[{
-        "id": p.user_id, 
+        "id": p.user_id,
         "name": f"{p.first_name} {p.last_name}",
+        "age": p.age,
+        "location": p.location,
         "bio": p.bio,
+        "hobbie1": p.hobbie1,
+        "hobbie2": p.hobbie2,
+        "hobbie3": p.hobbie3,
         "pic": p.profile_pic
     } for p in profiles])
 
@@ -106,15 +154,18 @@ def explore():
 def like_user():
     current_user_id = get_jwt_identity()
     target_id = request.json.get('target_id')
-    
-    new_match = Match(user_id=current_user_id, target_id=target_id, status='like')
+    action = request.json.get('action', 'like')  # 'like' or 'pass'
+
+    new_match = Match(user_id=current_user_id, target_id=target_id, status=action)
     db.session.add(new_match)
-    
-    # Check for mutual match
-    mutual = Match.query.filter_by(user_id=target_id, target_id=current_user_id).first()
     db.session.commit()
-    
-    return jsonify(is_match=bool(mutual))
+
+    is_match = False
+    if action == 'like':
+        mutual = Match.query.filter_by(user_id=target_id, target_id=current_user_id, status='like').first()
+        is_match = bool(mutual)
+
+    return jsonify(is_match=is_match)
 
 
 @api.route('/profile', methods=['GET'])
