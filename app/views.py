@@ -6,6 +6,7 @@ import os
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import pyotp
 
 api = Blueprint('api', __name__)
 
@@ -79,11 +80,97 @@ def login():
 
     user = User.query.filter_by(username=username).first()
 
-    if user and check_password_hash(user.password_hash, password):
-        access_token = create_access_token(identity=str(user.id))
-        return jsonify(message="Login successful", token=access_token), 200
-    
-    return jsonify(error="Invalid username or password"), 401
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify(error="Invalid username or password"), 401
+
+    if user.totp_enabled:
+        return jsonify(requires_2fa=True, user_id=user.id), 200
+
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify(message="Login successful", token=access_token), 200
+
+
+@api.route('/auth/2fa/verify', methods=['POST'])
+def verify_2fa_login():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    code = str(data.get('code', '')).strip()
+
+    user = db.session.get(User, user_id)
+    if not user or not user.totp_enabled:
+        return jsonify(error="Invalid request"), 400
+
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(code):
+        return jsonify(error="Invalid authentication code"), 401
+
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify(message="Login successful", token=access_token), 200
+
+
+@api.route('/auth/2fa/status', methods=['GET'])
+@jwt_required()
+def get_2fa_status():
+    current_user_id = int(get_jwt_identity())
+    user = db.session.get(User, current_user_id)
+    return jsonify(enabled=user.totp_enabled), 200
+
+
+@api.route('/auth/2fa/setup', methods=['POST'])
+@jwt_required()
+def setup_2fa():
+    current_user_id = int(get_jwt_identity())
+    user = db.session.get(User, current_user_id)
+
+    if user.totp_enabled:
+        return jsonify(error="2FA is already enabled"), 400
+
+    secret = pyotp.random_base32()
+    user.totp_secret = secret
+    db.session.commit()
+
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="DriftDater")
+    return jsonify(secret=secret, provisioning_uri=provisioning_uri), 200
+
+
+@api.route('/auth/2fa/enable', methods=['POST'])
+@jwt_required()
+def enable_2fa():
+    current_user_id = int(get_jwt_identity())
+    user = db.session.get(User, current_user_id)
+
+    code = str(request.get_json().get('code', '')).strip()
+    if not user.totp_secret:
+        return jsonify(error="Run setup first"), 400
+
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(code):
+        return jsonify(error="Invalid code — check your authenticator app"), 401
+
+    user.totp_enabled = True
+    db.session.commit()
+    return jsonify(message="Two-factor authentication enabled"), 200
+
+
+@api.route('/auth/2fa/disable', methods=['POST'])
+@jwt_required()
+def disable_2fa():
+    current_user_id = int(get_jwt_identity())
+    user = db.session.get(User, current_user_id)
+
+    code = str(request.get_json().get('code', '')).strip()
+    if not user.totp_enabled:
+        return jsonify(error="2FA is not enabled"), 400
+
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(code):
+        return jsonify(error="Invalid code"), 401
+
+    user.totp_secret = None
+    user.totp_enabled = False
+    db.session.commit()
+    return jsonify(message="Two-factor authentication disabled"), 200
 
 
 @api.route('/explore', methods=['GET'])

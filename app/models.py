@@ -9,6 +9,8 @@ class User(db.Model):
     username = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
+    totp_secret = db.Column(db.String(32), nullable=True)
+    totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
     profile = db.relationship('Profile', backref='user', uselist=False)
 
     def __init__(self, email, username, password_hash):
