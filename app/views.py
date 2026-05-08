@@ -1,10 +1,11 @@
 from app import app, db
-from .models import User, Profile
+from .models import User, Profile, Match
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from .forms import RegistrationForm, ProfileForm
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 api = Blueprint('api', __name__)
 
@@ -68,8 +69,23 @@ def register():
     
     errors = form_errors(reg_form) + form_errors(prof_form)
     return jsonify({"errors": errors}), 400
+
+   
+@api.route('/auth/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and check_password_hash(user.password_hash, password):
+        access_token = create_access_token(identity=user.id)
+        return jsonify(message="Login successful", token=access_token), 200
     
-    
+    return jsonify(error="Invalid username or password"), 401
+
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###
