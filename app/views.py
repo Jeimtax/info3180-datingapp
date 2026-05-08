@@ -1,5 +1,5 @@
 from app import app, db
-from .models import User, Profile, Match
+from .models import User, Profile, Match, Message
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
@@ -207,6 +207,96 @@ def get_matches():
                 })
                 
     return jsonify(matches=matches_data), 200
+
+
+@api.route('/users/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_user(user_id):
+    profile = Profile.query.filter_by(user_id=user_id).first()
+    if not profile:
+        return jsonify(error="User not found"), 404
+    return jsonify({
+        "user_id": user_id,
+        "name": f"{profile.first_name} {profile.last_name}",
+        "pic": profile.profile_pic or 'default.png',
+        "bio": profile.bio or ''
+    }), 200
+
+
+@api.route('/conversations', methods=['GET'])
+@jwt_required()
+def get_conversations():
+    current_user_id = int(get_jwt_identity())
+
+    msgs = Message.query.filter(
+        (Message.sender_id == current_user_id) | (Message.recipient_id == current_user_id)
+    ).order_by(Message.timestamp.desc()).all()
+
+    seen = set()
+    conversations = []
+    for msg in msgs:
+        other_id = msg.recipient_id if msg.sender_id == current_user_id else msg.sender_id
+        if other_id not in seen:
+            seen.add(other_id)
+            profile = Profile.query.filter_by(user_id=other_id).first()
+            if profile:
+                conversations.append({
+                    "user_id": other_id,
+                    "name": f"{profile.first_name} {profile.last_name}",
+                    "pic": profile.profile_pic or 'default.png',
+                    "last_message": msg.content,
+                    "timestamp": msg.timestamp.isoformat()
+                })
+
+    return jsonify(conversations=conversations), 200
+
+
+@api.route('/messages/<int:other_user_id>', methods=['GET'])
+@jwt_required()
+def get_messages(other_user_id):
+    current_user_id = int(get_jwt_identity())
+
+    msgs = Message.query.filter(
+        ((Message.sender_id == current_user_id) & (Message.recipient_id == other_user_id)) |
+        ((Message.sender_id == other_user_id) & (Message.recipient_id == current_user_id))
+    ).order_by(Message.timestamp.asc()).all()
+
+    return jsonify(messages=[{
+        "id": m.id,
+        "sender_id": m.sender_id,
+        "content": m.content,
+        "timestamp": m.timestamp.isoformat(),
+        "is_mine": m.sender_id == current_user_id
+    } for m in msgs]), 200
+
+
+@api.route('/messages/<int:other_user_id>', methods=['POST'])
+@jwt_required()
+def send_message(other_user_id):
+    current_user_id = int(get_jwt_identity())
+
+    i_liked = Match.query.filter_by(user_id=current_user_id, target_id=other_user_id, status='like').first()
+    they_liked = Match.query.filter_by(user_id=other_user_id, target_id=current_user_id, status='like').first()
+
+    if not i_liked or not they_liked:
+        return jsonify(error="You can only message mutual matches"), 403
+
+    data = request.get_json()
+    content = (data.get('content') or '').strip()
+    if not content:
+        return jsonify(error="Message cannot be empty"), 400
+
+    message = Message(sender_id=current_user_id, recipient_id=other_user_id, content=content)
+    db.session.add(message)
+    db.session.commit()
+
+    return jsonify({
+        "id": message.id,
+        "sender_id": message.sender_id,
+        "content": message.content,
+        "timestamp": message.timestamp.isoformat(),
+        "is_mine": True
+    }), 201
 
 
 ###
