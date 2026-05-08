@@ -36,7 +36,7 @@ def register():
                 last_name=data.get('last_name', 'User'),
                 location=data.get('location', 'Unknown'),
                 bio=data.get('bio', ''),
-                visibility=True
+                visibility='public'
             )
             db.session.add(profile)
             db.session.commit()
@@ -135,7 +135,7 @@ def like_user():
     current_user_id = get_jwt_identity()
     target_id = request.json.get('target_id')
     
-    new_match = Match(user_id=current_user_id, target_id=target_id, is_like=True)
+    new_match = Match(user_id=current_user_id, target_id=target_id, status='like')
     db.session.add(new_match)
     
     # Check for mutual match
@@ -173,12 +173,12 @@ def get_my_profile():
 def get_matches():
     current_user_id = get_jwt_identity()
     
-    matched_relations = Match.query.filter_by(user_id=current_user_id, is_like=True).all()
+    matched_relations = Match.query.filter_by(user_id=current_user_id, status='like').all()
     
     matches_data = []
     for m in matched_relations:
         # Check if the other person liked us back
-        mutual = Match.query.filter_by(user_id=m.target_id, target_id=current_user_id, is_like=True).first()
+        mutual = Match.query.filter_by(user_id=m.target_id, target_id=current_user_id, status='like').first()
         
         if mutual:
             other_user = Profile.query.filter_by(user_id=m.target_id).first()
@@ -215,7 +215,7 @@ def form_errors(form):
 def send_text_file(file_name):
     """Send your static text file."""
     file_dot_text = file_name + '.txt'
-    return app.send_static_file(file_dot_text)
+    return send_from_directory(app.static_folder, file_dot_text)
 
 
 @app.after_request
