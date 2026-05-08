@@ -24,7 +24,9 @@
 
 <script setup>
     import { ref, reactive } from 'vue';
-    import { useRouter } from 'vue-router';
+    import { useRouter, useRoute } from 'vue-router';
+
+    const route = useRoute();
 
     const router = useRouter();
     const formData = reactive({
@@ -60,7 +62,7 @@
                 
                 // Wait 1 second so they see the success message, then redirect to Explore
                 setTimeout(() => {
-                    router.push('/explore');
+                    router.push(route.query.redirect || '/explore');
                 }, 1500);
             }
         } catch (error) {
