@@ -168,6 +168,30 @@ def get_my_profile():
     }), 200
 
 
+@api.route('/matches', methods=['GET'])
+@jwt_required()
+def get_matches():
+    current_user_id = get_jwt_identity()
+    
+    matched_relations = Match.query.filter_by(user_id=current_user_id, is_like=True).all()
+    
+    matches_data = []
+    for m in matched_relations:
+        # Check if the other person liked us back
+        mutual = Match.query.filter_by(user_id=m.target_id, target_id=current_user_id, is_like=True).first()
+        
+        if mutual:
+            other_user = Profile.query.filter_by(user_id=m.target_id).first()
+            if other_user:
+                matches_data.append({
+                    "id": other_user.user_id,
+                    "name": f"{other_user.first_name} {other_user.last_name}",
+                    "pic": other_user.profile_pic or 'default.png'
+                })
+                
+    return jsonify(matches=matches_data), 200
+
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###
