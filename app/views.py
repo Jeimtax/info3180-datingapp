@@ -1,6 +1,6 @@
 from app import app, db
 from sqlalchemy import or_
-from .models import User, Profile, Match, Message
+from .models import User, Profile, Match, Message, Favorite
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
 import os
 from werkzeug.utils import secure_filename
@@ -435,6 +435,44 @@ def send_message(other_user_id):
         "timestamp": message.timestamp.isoformat(),
         "is_mine": True
     }), 201
+
+
+@api.route('/favorites', methods=['GET'])
+@jwt_required()
+def get_favorites():
+    current_user_id = int(get_jwt_identity())
+    favs = Favorite.query.filter_by(user_id=current_user_id).all()
+    result = []
+    for f in favs:
+        profile = Profile.query.filter_by(user_id=f.target_id).first()
+        if profile:
+            result.append({
+                "id": f.target_id,
+                "name": f"{profile.first_name} {profile.last_name}",
+                "bio": profile.bio or '',
+                "pic": profile.profile_pic or 'default.png'
+            })
+    return jsonify(favorites=result), 200
+
+
+@api.route('/favorites', methods=['POST'])
+@jwt_required()
+def toggle_favorite():
+    current_user_id = int(get_jwt_identity())
+    target_id = request.get_json().get('target_id')
+    if not target_id:
+        return jsonify(error="target_id required"), 400
+
+    existing = Favorite.query.filter_by(user_id=current_user_id, target_id=target_id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify(favorited=False), 200
+
+    fav = Favorite(user_id=current_user_id, target_id=target_id)
+    db.session.add(fav)
+    db.session.commit()
+    return jsonify(favorited=True), 201
 
 
 ###
