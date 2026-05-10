@@ -1,169 +1,290 @@
 <template>
-  <div class="matches-container">
-    <div class="matches-header">
-      <h1>Your Matches</h1>
-      <span v-if="!isLoading" class="match-count">{{ filteredMatches.length }} match{{ filteredMatches.length !== 1 ? 'es' : '' }}</span>
-    </div>
-
-    <div v-if="!isLoading && matches.length > 0" class="search-bar">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Filter matches by name or bio..."
-        class="search-input"
-      />
-    </div>
-
-    <div v-if="isLoading" class="state-msg">Loading your matches...</div>
-
-    <div v-else-if="matches.length === 0" class="state-msg empty">
-      <p>No mutual matches yet. Keep exploring!</p>
-      <router-link to="/explore" class="btn-explore">Browse Profiles</router-link>
-    </div>
-
-    <div v-else-if="filteredMatches.length === 0" class="state-msg">
-      <p>No matches found for "{{ searchQuery }}".</p>
-    </div>
-
-    <div v-else class="matches-list">
-      <div v-for="match in filteredMatches" :key="match.id" class="match-card">
-        <div v-if="picUrl(match)" class="pic-wrapper">
-          <img :src="picUrl(match)" :alt="match.name" class="match-pic" />
+  <div class="home-wrapper">
+    <div class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">Find Your <span class="gradient-text">Drift</span></h1>
+        <p class="hero-subtitle">
+          DriftDater connects you with people who share your vibe — based on location,
+          age, and interests. Create a profile, explore matches, and start a conversation.
+        </p>
+        <div class="hero-actions">
+          <RouterLink to="/register" class="btn-primary">Get Started</RouterLink>
+          <RouterLink to="/login" class="btn-secondary">Login</RouterLink>
         </div>
-        <div v-else class="match-pic placeholder-pic">
-          {{ match.name?.[0] }}
-        </div>
-
-        <div class="match-info">
-          <h2>{{ match.name }}</h2>
-          <p class="bio">{{ match.bio || 'No bio yet.' }}</p>
-        </div>
-
-        <router-link :to="`/messages/${match.id}`" class="btn-message">
-          Message
-        </router-link>
       </div>
+      <div class="hero-visual">
+        <div class="card-stack">
+          <div class="fake-card fc3">
+            <div class="fc-pic" style="background: #c7d2fe"></div>
+            <div class="fc-lines">
+              <div class="fc-line long"></div>
+              <div class="fc-line short"></div>
+            </div>
+          </div>
+          <div class="fake-card fc2">
+            <div class="fc-pic" style="background: #ddd6fe"></div>
+            <div class="fc-lines">
+              <div class="fc-line long"></div>
+              <div class="fc-line short"></div>
+            </div>
+          </div>
+          <div class="fake-card fc1">
+            <div class="fc-pic" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)"></div>
+            <div class="fc-lines">
+              <div class="fc-line long"></div>
+              <div class="fc-line short"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">👤</div>
+        <h3>Build Your Profile</h3>
+        <p>Add your photo, bio, hobbies, and relationship goals so others can get to know you.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Explore and Filter</h3>
+        <p>Browse profiles filtered by age, location, and shared interests. Like or pass with one click.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>Chat with Matches</h3>
+        <p>When two people like each other it is a match. Unlock messaging and start the conversation.</p>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <h2>Ready to meet someone?</h2>
+      <RouterLink to="/register" class="btn-cta">Create a Free Account</RouterLink>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-
-const matches = ref([]);
-const isLoading = ref(true);
-const searchQuery = ref('');
-
-const filteredMatches = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim();
-  if (!q) return matches.value;
-  return matches.value.filter(m =>
-    m.name.toLowerCase().includes(q) ||
-    (m.bio || '').toLowerCase().includes(q)
-  );
-});
-
-function picUrl(match) {
-  if (!match.pic || match.pic === 'default.png') return null;
-  return 'http://localhost:5000/static/uploads/' + match.pic;
-}
-
-async function fetchMatches() {
-  const token = localStorage.getItem('token');
-  try {
-    const response = await fetch("http://localhost:5000/api/v1/matches", {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-    if (response.ok) {
-      matches.value = data.matches;
-    }
-  } catch (error) {
-    console.error("Error fetching matches:", error);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-onMounted(fetchMatches);
+import { RouterLink } from 'vue-router'
 </script>
 
 <style scoped>
-.matches-container { max-width: 800px; margin: 40px auto; padding: 20px; }
+.home-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+}
 
-.matches-header {
+.hero {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 60px;
+  margin-bottom: 80px;
 }
 
-h1 { color: #6366f1; margin: 0; }
+.hero-content {
+  flex: 1;
+}
 
-.match-count {
+.hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0 0 16px;
+  line-height: 1.15;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: #6b7280;
+  line-height: 1.7;
+  margin: 0 0 32px;
+  max-width: 480px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  padding: 14px 32px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
-  font-size: 0.85rem;
+  border-radius: 10px;
+  text-decoration: none;
   font-weight: 700;
-  padding: 4px 12px;
+  font-size: 1rem;
+}
+
+.btn-secondary {
+  padding: 14px 32px;
+  background: white;
+  color: #6366f1;
+  border: 2px solid #6366f1;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.hero-visual {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.card-stack {
+  position: relative;
+  width: 220px;
+  height: 280px;
+}
+
+.fake-card {
+  position: absolute;
+  width: 200px;
+  height: 260px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fc1 {
+  top: 0;
+  left: 20px;
+  z-index: 3;
+}
+
+.fc2 {
+  top: 14px;
+  left: 10px;
+  z-index: 2;
+  transform: rotate(-4deg);
+}
+
+.fc3 {
+  top: 24px;
+  left: 0;
+  z-index: 1;
+  transform: rotate(-8deg);
+}
+
+.fc-pic {
+  height: 140px;
+  border-radius: 10px;
+}
+
+.fc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.fc-line {
+  height: 10px;
+  border-radius: 6px;
+  background: #e5e7eb;
+}
+
+.fc-line.long {
+  width: 80%;
+}
+
+.fc-line.short {
+  width: 50%;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-bottom: 80px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.feature-card h3 {
+  color: #1f2937;
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.feature-card p {
+  color: #6b7280;
+  font-size: 0.93rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.cta-section {
+  text-align: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border-radius: 20px;
+  padding: 60px 24px;
+  color: white;
 }
 
-.search-bar { margin-bottom: 20px; }
-
-.search-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  box-sizing: border-box;
-}
-.search-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+.cta-section h2 {
+  font-size: 1.8rem;
+  margin: 0 0 24px;
 }
 
-.state-msg { text-align: center; color: #888; margin-top: 60px; font-size: 1.1rem; }
-.empty { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-
-.btn-explore {
-  padding: 10px 28px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white; border-radius: 8px; text-decoration: none;
-  font-weight: 600;
+.btn-cta {
+  display: inline-block;
+  padding: 14px 36px;
+  background: white;
+  color: #6366f1;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
-.matches-list { display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 700px) {
+  .hero {
+    flex-direction: column;
+    gap: 40px;
+    text-align: center;
+  }
 
-.match-card {
-  display: flex; align-items: center; gap: 16px;
-  background: white; padding: 16px 20px;
-  border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-}
+  .hero-title {
+    font-size: 2.2rem;
+  }
 
-.match-pic {
-  width: 70px; height: 70px; border-radius: 50%;
-  object-fit: cover; border: 3px solid #6366f1; flex-shrink: 0;
-}
+  .hero-subtitle {
+    max-width: 100%;
+  }
 
-.placeholder-pic {
-  width: 70px; height: 70px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white; font-size: 1.8rem; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-}
+  .hero-actions {
+    justify-content: center;
+  }
 
-.match-info { flex: 1; min-width: 0; }
-.match-info h2 { margin: 0 0 4px; font-size: 1.1rem; color: #1f2937; }
-.bio { margin: 0; color: #6b7280; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.btn-message {
-  padding: 10px 22px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white; border-radius: 8px;
-  text-decoration: none; font-weight: 600;
-  white-space: nowrap; flex-shrink: 0;
+  .hero-visual {
+    display: none;
+  }
 }
 </style>
