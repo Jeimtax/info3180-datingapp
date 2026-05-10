@@ -58,6 +58,12 @@ const router = createRouter({
       name: 'conversation',
       component: () => import('../views/MessagesView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/favorites',
+      name: 'favorites',
+      component: () => import('../views/FavoritesView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
