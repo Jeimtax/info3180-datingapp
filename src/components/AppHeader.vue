@@ -26,6 +26,9 @@
               <RouterLink class="nav-link" to="/matches">Matches</RouterLink>
             </li>
             <li class="nav-item">
+              <RouterLink class="nav-link" to="/favorites">Bookmarks</RouterLink>
+            </li>
+            <li class="nav-item">
               <RouterLink class="nav-link" to="/messages">Messages</RouterLink>
             </li>
             <li class="nav-item">
