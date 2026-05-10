@@ -26,13 +26,13 @@ class Profile(db.Model):
     __tablename__= 'profiles'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    age = db.Column(db.Integer)
+    age = db.Column(db.Integer, index=True)
     gender = db.Column(db.String(20))
     bio = db.Column(db.Text)
-    location = db.Column(db.String(100))
+    location = db.Column(db.String(100), index=True)
 
     hobbie1 = db.Column(db.String(255))
     hobbie2 = db.Column(db.String(255))
@@ -52,9 +52,9 @@ class Match(db.Model):
     __tablename__ = 'matches'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    target_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20)) # like and dislike
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    target_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -72,3 +72,15 @@ class Message(db.Model):
 
     def __repr__(self):
         return '<Message %r>' % self.id
+
+
+class Favorite(db.Model):
+    __tablename__ = 'favorites'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    target_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return '<Favorite %r -> %r>' % (self.user_id, self.target_id)
