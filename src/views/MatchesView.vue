@@ -1,6 +1,18 @@
 <template>
   <div class="matches-container">
-    <h1>Your Matches</h1>
+    <div class="matches-header">
+      <h1>Your Matches</h1>
+      <span v-if="!isLoading" class="match-count">{{ filteredMatches.length }} match{{ filteredMatches.length !== 1 ? 'es' : '' }}</span>
+    </div>
+
+    <div v-if="!isLoading && matches.length > 0" class="search-bar">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Filter matches by name or bio..."
+        class="search-input"
+      />
+    </div>
 
     <div v-if="isLoading" class="state-msg">Loading your matches...</div>
 
@@ -9,8 +21,12 @@
       <router-link to="/explore" class="btn-explore">Browse Profiles</router-link>
     </div>
 
+    <div v-else-if="filteredMatches.length === 0" class="state-msg">
+      <p>No matches found for "{{ searchQuery }}".</p>
+    </div>
+
     <div v-else class="matches-list">
-      <div v-for="match in matches" :key="match.id" class="match-card">
+      <div v-for="match in filteredMatches" :key="match.id" class="match-card">
         <div v-if="picUrl(match)" class="pic-wrapper">
           <img :src="picUrl(match)" :alt="match.name" class="match-pic" />
         </div>
@@ -32,10 +48,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
 const matches = ref([]);
 const isLoading = ref(true);
+const searchQuery = ref('');
+
+const filteredMatches = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return matches.value;
+  return matches.value.filter(m =>
+    m.name.toLowerCase().includes(q) ||
+    (m.bio || '').toLowerCase().includes(q)
+  );
+});
 
 function picUrl(match) {
   if (!match.pic || match.pic === 'default.png') return null;
@@ -65,7 +91,39 @@ onMounted(fetchMatches);
 <style scoped>
 .matches-container { max-width: 800px; margin: 40px auto; padding: 20px; }
 
-h1 { color: #6366f1; margin-bottom: 24px; }
+.matches-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+h1 { color: #6366f1; margin: 0; }
+
+.match-count {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.search-bar { margin-bottom: 20px; }
+
+.search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+.search-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
 
 .state-msg { text-align: center; color: #888; margin-top: 60px; font-size: 1.1rem; }
 .empty { display: flex; flex-direction: column; align-items: center; gap: 16px; }
