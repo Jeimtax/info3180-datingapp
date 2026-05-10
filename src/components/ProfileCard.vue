@@ -1,7 +1,7 @@
 <template>
   <div class="profile-card">
     <div class="pic-wrapper">
-      <img v-if="picUrl" :src="picUrl" :alt="profile.name" class="profile-pic" />
+      <img v-if="picUrl && !imgError" :src="picUrl" :alt="profile.name" class="profile-pic" @error="imgError = true" />
       <div v-else class="profile-pic placeholder">{{ profile.name?.[0] }}</div>
       <button
         class="btn-fav"
@@ -37,6 +37,7 @@ const props = defineProps(['profile'])
 defineEmits(['like', 'pass'])
 
 const isFavorited = ref(false)
+const imgError = ref(false)
 
 const picUrl = computed(() => {
   if (!props.profile.pic || props.profile.pic === 'default.png') return null

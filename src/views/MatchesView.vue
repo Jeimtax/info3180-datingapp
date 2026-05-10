@@ -27,9 +27,7 @@
 
     <div v-else class="matches-list">
       <div v-for="match in filteredMatches" :key="match.id" class="match-card">
-        <div v-if="picUrl(match)" class="pic-wrapper">
-          <img :src="picUrl(match)" :alt="match.name" class="match-pic" />
-        </div>
+        <img v-if="picUrl(match) && !failedPics.has(match.id)" :src="picUrl(match)" :alt="match.name" class="match-pic" @error="failedPics.add(match.id)" />
         <div v-else class="match-pic placeholder-pic">
           {{ match.name?.[0] }}
         </div>
@@ -48,11 +46,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 
 const matches = ref([]);
 const isLoading = ref(true);
 const searchQuery = ref('');
+const failedPics = reactive(new Set());
 
 const filteredMatches = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();

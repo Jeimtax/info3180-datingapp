@@ -11,9 +11,7 @@
 
     <div v-else class="favs-list">
       <div v-for="fav in favorites" :key="fav.id" class="fav-card">
-        <div v-if="picUrl(fav)" class="pic-wrapper">
-          <img :src="picUrl(fav)" :alt="fav.name" class="fav-pic" />
-        </div>
+        <img v-if="picUrl(fav) && !failedPics.has(fav.id)" :src="picUrl(fav)" :alt="fav.name" class="fav-pic" @error="failedPics.add(fav.id)" />
         <div v-else class="fav-pic placeholder-pic">{{ fav.name?.[0] }}</div>
 
         <div class="fav-info">
@@ -28,10 +26,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 
 const favorites = ref([])
 const isLoading = ref(true)
+const failedPics = reactive(new Set())
 
 function picUrl(fav) {
   if (!fav.pic || fav.pic === 'default.png') return null

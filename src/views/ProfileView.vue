@@ -2,9 +2,7 @@
   <div class="profile-container">
     <template v-if="user && !isEditing">
       <div class="profile-header">
-        <div v-if="picUrl" class="pic-wrapper">
-          <img :src="picUrl" alt="Profile Photo" class="main-pic" />
-        </div>
+        <img v-if="picUrl && !picError" :src="picUrl" alt="Profile Photo" class="main-pic" @error="picError = true" />
         <div v-else class="main-pic placeholder-pic">
           {{ user.first_name?.[0] }}{{ user.last_name?.[0] }}
         </div>
@@ -284,6 +282,8 @@ const editData = reactive({
   relationship_goal: '',
   visibility: 'public'
 });
+
+const picError = ref(false);
 
 const picUrl = computed(() => {
   if (!user.value?.pic || user.value.pic === 'default.png') return null;

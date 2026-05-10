@@ -19,9 +19,7 @@
           :class="{ active: activeConvo?.user_id === convo.user_id }"
           @click="selectConvo(convo)"
         >
-          <div v-if="picFor(convo)" class="convo-pic-wrap">
-            <img :src="picFor(convo)" :alt="convo.name" class="convo-pic" />
-          </div>
+          <img v-if="picFor(convo) && !failedPics.has(convo.user_id)" :src="picFor(convo)" :alt="convo.name" class="convo-pic" @error="failedPics.add(convo.user_id)" />
           <div v-else class="convo-pic placeholder">{{ convo.name?.[0] }}</div>
           <div class="convo-info">
             <span class="convo-name">{{ convo.name }}</span>
@@ -40,9 +38,7 @@
       <template v-else>
         <div class="thread-header">
           <button class="btn-back" @click="activeConvo = null">&#8592;</button>
-          <div v-if="picFor(activeConvo)" class="header-pic-wrap">
-            <img :src="picFor(activeConvo)" :alt="activeConvo.name" class="header-pic" />
-          </div>
+          <img v-if="picFor(activeConvo) && !failedPics.has(activeConvo.user_id)" :src="picFor(activeConvo)" :alt="activeConvo.name" class="header-pic" @error="failedPics.add(activeConvo.user_id)" />
           <div v-else class="header-pic placeholder">{{ activeConvo.name?.[0] }}</div>
           <span class="header-name">{{ activeConvo.name }}</span>
         </div>
@@ -82,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
@@ -96,6 +92,7 @@ const isLoadingMsgs = ref(false);
 const isSending = ref(false);
 const draft = ref('');
 const threadEl = ref(null);
+const failedPics = reactive(new Set());
 
 let pollInterval = null;
 
