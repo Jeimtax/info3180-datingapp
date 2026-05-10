@@ -3,6 +3,12 @@
     <div class="pic-wrapper">
       <img v-if="picUrl" :src="picUrl" :alt="profile.name" class="profile-pic" />
       <div v-else class="profile-pic placeholder">{{ profile.name?.[0] }}</div>
+      <button
+        class="btn-fav"
+        :class="{ active: isFavorited }"
+        :title="isFavorited ? 'Remove bookmark' : 'Bookmark profile'"
+        @click.stop="toggleFavorite"
+      >{{ isFavorited ? '★' : '☆' }}</button>
     </div>
 
     <div class="profile-info">
@@ -25,15 +31,32 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue'
 
-const props = defineProps(['profile']);
-defineEmits(['like', 'pass']);
+const props = defineProps(['profile'])
+defineEmits(['like', 'pass'])
+
+const isFavorited = ref(false)
 
 const picUrl = computed(() => {
-  if (!props.profile.pic || props.profile.pic === 'default.png') return null;
-  return 'http://localhost:5000/static/uploads/' + props.profile.pic;
-});
+  if (!props.profile.pic || props.profile.pic === 'default.png') return null
+  return 'http://localhost:5000/static/uploads/' + props.profile.pic
+})
+
+async function toggleFavorite() {
+  const token = localStorage.getItem('token')
+  try {
+    const res = await fetch('http://localhost:5000/api/v1/favorites', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_id: props.profile.id })
+    })
+    const data = await res.json()
+    if (res.ok) isFavorited.value = data.favorited
+  } catch (e) {
+    console.error('Favorite toggle failed:', e)
+  }
+}
 </script>
 
 <style scoped>
@@ -48,7 +71,7 @@ const picUrl = computed(() => {
 }
 .profile-card:hover { transform: translateY(-4px); }
 
-.pic-wrapper { width: 100%; height: 220px; overflow: hidden; }
+.pic-wrapper { width: 100%; height: 220px; overflow: hidden; position: relative; }
 .profile-pic { width: 100%; height: 100%; object-fit: cover; }
 .placeholder {
   width: 100%; height: 100%;
@@ -56,6 +79,21 @@ const picUrl = computed(() => {
   color: white; font-size: 4rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
+
+.btn-fav {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: rgba(255,255,255,0.9);
+  border: none; border-radius: 50%;
+  width: 34px; height: 34px;
+  font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  color: #9ca3af;
+  transition: color 0.2s, background 0.2s;
+}
+.btn-fav.active { color: #f59e0b; }
+.btn-fav:hover { background: white; }
 
 .profile-info { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 
