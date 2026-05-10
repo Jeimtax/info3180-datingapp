@@ -175,3 +175,12 @@ The Vue app will be available at `http://localhost:5173`.
 | `JWT_SECRET_KEY` | JWT signing secret |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `UPLOAD_FOLDER` | Path for uploaded profile images |
+
+---
+
+## Known Issues / Limitations
+
+- **Bookmark resets on page refresh** — the star icon on profile cards does not persist across page loads (favorites are saved in the database only).
+- **No password reset** — forget password / email reset is not implemented.
+- **Not deployed** — the application runs locally only. No cloud deployment URL is available at this time.
+- **Profile picture filenames are not namespaced** — if two users upload files with the same name, the second overwrites the first in static/uploads/.
